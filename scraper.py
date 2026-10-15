@@ -10,16 +10,6 @@ from urllib.parse import quote_plus, urljoin
 import requests
 from bs4 import BeautifulSoup
 
-# ---------------------------------------------------------------------------
-# STORES. "trusted": True  = a bookstore that sells its own stock.
-#         "trusted": False = a marketplace where many different sellers list
-#                            items (fakes are possible, so check the seller).
-# {q} is replaced by what you typed in the search box.
-# These search-page addresses are written from general knowledge and have not
-# been tested live. If a store always shows "no results", open its search link
-# in your browser, copy the address from the address bar, and replace the URL
-# here (put {q} where the search words go).
-# ---------------------------------------------------------------------------
 STORES = [
     {"name": "Bookswagon", "url": "https://www.bookswagon.com/search-books/{q}", "trusted": True},
     {"name": "SapnaOnline", "url": "https://www.sapnaonline.com/searchproducts?keyword={q}", "trusted": True},
@@ -92,13 +82,16 @@ def extract_listings(html, query, base_url, blocked=()):
             node = node.parent
             if node is None or node.name in ("body", "html"):
                 break
-            matching_links = {
+            
+            # Collect distinct product URLs in this container to check if we've gone too high
+            matching_urls = {
                 link_of(x)
                 for x in node.find_all("a", href=True)
                 if is_match(x.get_text(" ", strip=True))
             }
-            if len(matching_links) > 1:  # reached a block with several products
+            if len(matching_urls) > 1:  # Reached a block containing multiple different products
                 break
+                
             card_text = node.get_text(" ", strip=True)
             price = _parse_price(card_text)
             if price:
